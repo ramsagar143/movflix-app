@@ -1,0 +1,58 @@
+name: Build APK
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Android SDK
+        run: |
+          cd "$HOME"
+          wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdtools.zip
+          unzip -q cmdtools.zip
+          mkdir -p android-sdk/cmdline-tools/latest
+          mv cmdline-tools/* android-sdk/cmdline-tools/latest/
+          echo "ANDROID_HOME=$HOME/android-sdk" >> "$GITHUB_ENV"
+          echo "$HOME/android-sdk/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
+
+      - name: Install SDK packages
+        run: |
+          yes | sdkmanager --licenses > /dev/null
+          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+
+      - name: Add crash catcher + backend URL
+        run: |
+          cd MovFlix
+          echo "cGFja2FnZSBjb20ubW92ZmxpeC5hcHAKCmltcG9ydCBhbmRyb2lkLmFwcC5BcHBsaWNhdGlvbgppbXBvcnQgYW5kcm9pZC5jb250ZW50LkludGVudAoKY2xhc3MgTXlBcHAgOiBBcHBsaWNhdGlvbigpIHsKICAgIG92ZXJyaWRlIGZ1biBvbkNyZWF0ZSgpIHsKICAgICAgICBzdXBlci5vbkNyZWF0ZSgpCiAgICAgICAgVGhyZWFkLnNldERlZmF1bHRVbmNhdWdodEV4Y2VwdGlvbkhhbmRsZXIgeyBfLCBlIC0+CiAgICAgICAgICAgIHRyeSB7CiAgICAgICAgICAgICAgICB2YWwgc3cgPSBqYXZhLmlvLlN0cmluZ1dyaXRlcigpCiAgICAgICAgICAgICAgICBlLnByaW50U3RhY2tUcmFjZShqYXZhLmlvLlByaW50V3JpdGVyKHN3KSkKICAgICAgICAgICAgICAgIHZhbCBpID0gSW50ZW50KHRoaXMsIENyYXNoQWN0aXZpdHk6OmNsYXNzLmphdmEpCiAgICAgICAgICAgICAgICBpLnB1dEV4dHJhKCJ0cmFjZSIsIHN3LnRvU3RyaW5nKCkpCiAgICAgICAgICAgICAgICBpLmFkZEZsYWdzKEludGVudC5GTEFHX0FDVElWSVRZX05FV19UQVNLKQogICAgICAgICAgICAgICAgc3RhcnRBY3Rpdml0eShpKQogICAgICAgICAgICB9IGNhdGNoIChfOiBFeGNlcHRpb24pIHsgfQogICAgICAgICAgICBhbmRyb2lkLm9zLlByb2Nlc3Mua2lsbFByb2Nlc3MoYW5kcm9pZC5vcy5Qcm9jZXNzLm15UGlkKCkpCiAgICAgICAgfQogICAgfQp9Cg==" | base64 -d > app/src/main/java/com/movflix/app/MyApp.kt
+          echo "cGFja2FnZSBjb20ubW92ZmxpeC5hcHAKCmltcG9ydCBhbmRyb2lkLm9zLkJ1bmRsZQppbXBvcnQgYW5kcm9pZC53aWRnZXQuU2Nyb2xsVmlldwppbXBvcnQgYW5kcm9pZC53aWRnZXQuVGV4dFZpZXcKaW1wb3J0IGFuZHJvaWR4LmFwcGNvbXBhdC5hcHAuQXBwQ29tcGF0QWN0aXZpdHkKCmNsYXNzIENyYXNoQWN0aXZpdHkgOiBBcHBDb21wYXRBY3Rpdml0eSgpIHsKICAgIG92ZXJyaWRlIGZ1biBvbkNyZWF0ZShzYXZlZEluc3RhbmNlU3RhdGU6IEJ1bmRsZT8pIHsKICAgICAgICBzdXBlci5vbkNyZWF0ZShzYXZlZEluc3RhbmNlU3RhdGUpCiAgICAgICAgdmFsIHN2ID0gU2Nyb2xsVmlldyh0aGlzKQogICAgICAgIHZhbCB0diA9IFRleHRWaWV3KHRoaXMpCiAgICAgICAgdHYudGV4dCA9IGludGVudC5nZXRTdHJpbmdFeHRyYSgidHJhY2UiKSA/OiAiTm8gdHJhY2UiCiAgICAgICAgdHYudGV4dFNpemUgPSAxMmYKICAgICAgICB0di5zZXRQYWRkaW5nKDQwLCA0MCwgNDAsIDQwKQogICAgICAgIHN2LmFkZFZpZXcodHYpCiAgICAgICAgc2V0Q29udGVudFZpZXcoc3YpCiAgICB9Cn0K" | base64 -d > app/src/main/java/com/movflix/app/CrashActivity.kt
+          sed -i 's|<application|<application android:name=".MyApp"|' app/src/main/AndroidManifest.xml
+          sed -i 's|</application>|<activity android:name=".CrashActivity" android:exported="false" /></application>|' app/src/main/AndroidManifest.xml
+          sed -i 's|YOUR-BACKEND|movflix-16ow|' app/build.gradle.kts
+
+      - name: Setup Gradle 8.7
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.7"
+
+      - name: Build APK
+        run: |
+          cd MovFlix
+          gradle assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: movflix-apk
+          path: MovFlix/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 7
