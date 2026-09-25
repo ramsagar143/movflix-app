@@ -1,0 +1,18 @@
+name: Extract ZIP
+on: push
+jobs:
+  unzip:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract uploaded zip
+        run: |
+          if ls *.zip 1>/dev/null 2>&1; then
+            unzip -o *.zip
+            rm -f *.zip
+            git config user.name "setup"
+            git config user.email "setup@example.com"
+            git add -A
+            git commit -m "Auto-extract project files" || echo "done"
+            git push
+          fi
