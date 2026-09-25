@@ -1,0 +1,6 @@
+*.iml
+.gradle/
+local.properties
+/app/build/
+node_modules/
+.env
