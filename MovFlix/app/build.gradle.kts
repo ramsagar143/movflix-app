@@ -14,7 +14,7 @@ android {
         versionCode = 1
         versionName = "1.0"
         // 👇👇👇 YAHAN APNI RENDER BACKEND URL DAALO (slash ke saath) 👇👇👇
-        buildConfigField("String", "BACKEND_URL", "\"https://YOUR-BACKEND.onrender.com/\"")
+        buildConfigField("String", "BACKEND_URL", "\"https://movflix-16ow.onrender.com/\"")
     }
 
     buildFeatures {
