@@ -18,6 +18,7 @@ jobs:
 
       - name: Use runner Android SDK
         run: |
+          mkdir -p MovFlix/app/src/main/java/com/movflix/app MovFlix/app/src/main/res/layout MovFlix/app/src/main/res/menu MovFlix/app/src/main/res/color MovFlix/app/src/main/res/drawable
           echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> "$GITHUB_ENV"
           SM=/usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager
           yes | $SM --licenses > /dev/null
