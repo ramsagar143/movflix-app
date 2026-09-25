@@ -31,6 +31,7 @@ jobs:
           sed -i 's|<application|<application android:name=".MyApp"|' app/src/main/AndroidManifest.xml
           sed -i 's|</application>|<activity android:name=".CrashActivity" android:exported="false" /></application>|' app/src/main/AndroidManifest.xml
           sed -i 's|YOUR-BACKEND|movflix-16ow|' app/build.gradle.kts
+          echo "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4KPEltYWdlVmlldyB4bWxuczphbmRyb2lkPSJodHRwOi8vc2NoZW1hcy5hbmRyb2lkLmNvbS9hcGsvcmVzL2FuZHJvaWQiCiAgICBhbmRyb2lkOmlkPSJAK2lkL2Jhbm5lckltZyIKICAgIGFuZHJvaWQ6bGF5b3V0X3dpZHRoPSJtYXRjaF9wYXJlbnQiCiAgICBhbmRyb2lkOmxheW91dF9oZWlnaHQ9Im1hdGNoX3BhcmVudCIKICAgIGFuZHJvaWQ6c2NhbGVUeXBlPSJjZW50ZXJDcm9wIgogICAgYW5kcm9pZDpiYWNrZ3JvdW5kPSJAY29sb3IvY2FyZF9iZyIgLz4K" | base64 -d > app/src/main/res/layout/item_banner.xml
 
       - name: Setup Gradle 8.7
         uses: gradle/actions/setup-gradle@v4
