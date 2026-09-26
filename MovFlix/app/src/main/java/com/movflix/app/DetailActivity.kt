@@ -31,14 +31,22 @@ class DetailActivity : AppCompatActivity() {
             return
         }
 
+        // Direct Stream URL construct kar lete hain as fallback
+        streamUrl = if (mediaType == "movie") {
+            "https://nxsha.screenscape.me/embed?tmdb=$mediaId&type=movie"
+        } else {
+            "https://nxsha.screenscape.me/embed?tmdb=$mediaId&type=tv&s=1&e=1"
+        }
+
         fetchDetail(mediaType, mediaId)
 
-        // Play Button Click Listener (ScreenScape Player Open karega)
+        // Forcefully Button Text ko update karein
+        binding.playBtn.text = "▶  Play Now"
         binding.playBtn.setOnClickListener {
             if (!streamUrl.isNullOrEmpty()) {
                 openInAppPlayer(streamUrl!!)
             } else {
-                Toast.makeText(this, "Streaming link available nahi hai", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Streaming link not available", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -47,15 +55,21 @@ class DetailActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 val detail = ApiClient.service.getDetail(type, id)
-                streamUrl = detail.streamUrl
+                
+                // Server se milne waala stream_url override karein
+                if (!detail.streamUrl.isNullOrEmpty()) {
+                    streamUrl = detail.streamUrl
+                }
 
-                binding.detailTitle.text = detail.title ?: detail.name ?: ""
-                binding.detailOverview.text = detail.overview ?: ""
+                binding.detailTitle.text = detail.title ?: detail.name ?: "Unknown Title"
+                binding.detailOverview.text = detail.overview ?: "No overview available."
                 binding.detailRating.text = "★ " + String.format("%.1f", detail.voteAverage ?: 0.0)
 
                 val year = (detail.releaseDate ?: detail.firstAirDate ?: "").take(4)
                 val runtimeStr = if (detail.runtime != null && detail.runtime > 0) "${detail.runtime} min" else ""
-                binding.detailYear.text = "$year   $runtimeStr".trim()
+                
+                // Fixed text binding
+                binding.detailYear.text = if (runtimeStr.isNotEmpty()) "$year  •  $runtimeStr" else year
 
                 binding.detailGenres.text = detail.genres?.joinToString(" • ") { it.name } ?: ""
 
@@ -64,7 +78,8 @@ class DetailActivity : AppCompatActivity() {
                     .into(binding.detailBackdrop)
 
             } catch (e: Exception) {
-                Toast.makeText(this@DetailActivity, "Data load karne me problem aayi", Toast.LENGTH_SHORT).show()
+                // Network error hone par bhi Play button ScreenScape url use karega
+                Toast.makeText(this@DetailActivity, "Loading metadata from fallback...", Toast.LENGTH_SHORT).show()
             }
         }
     }
