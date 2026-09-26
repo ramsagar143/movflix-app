@@ -11,8 +11,9 @@ import coil.load
 
 fun openDetail(v: View, m: Media) {
     val i = Intent(v.context, DetailActivity::class.java)
-    i.putExtra("id", m.id)
-    i.putExtra("type", m.type)
+    // Intent keys updated to match DetailActivity requirements
+    i.putExtra("MEDIA_ID", m.id)
+    i.putExtra("MEDIA_TYPE", m.type ?: "movie")
     i.putExtra("title", m.displayTitle)
     v.context.startActivity(i)
 }
