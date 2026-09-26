@@ -3,7 +3,6 @@ package com.movflix.app
 import android.annotation.SuppressLint
 import android.app.Dialog
 import android.os.Bundle
-import android.view.View
 import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -34,12 +33,12 @@ class DetailActivity : AppCompatActivity() {
 
         fetchDetail(mediaType, mediaId)
 
-        binding.btnPlayTrailer.text = "Play Now"
-        binding.btnPlayTrailer.setOnClickListener {
-            if (!streamUrl.isNullEmpty()) {
+        // Play Button Click Listener (ScreenScape Player Open karega)
+        binding.playBtn.setOnClickListener {
+            if (!streamUrl.isNullOrEmpty()) {
                 openInAppPlayer(streamUrl!!)
             } else {
-                Toast.makeText(this, "Streaming link not available", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Streaming link available nahi hai", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -50,53 +49,51 @@ class DetailActivity : AppCompatActivity() {
                 val detail = ApiClient.service.getDetail(type, id)
                 streamUrl = detail.streamUrl
 
-                binding.tvTitle.text = detail.title ?: detail.name ?: ""
-                binding.tvOverview.text = detail.overview ?: ""
-                binding.tvRating.text = String.format("%.1f", detail.voteAverage ?: 0.0)
+                binding.detailTitle.text = detail.title ?: detail.name ?: ""
+                binding.detailOverview.text = detail.overview ?: ""
+                binding.detailRating.text = "★ " + String.format("%.1f", detail.voteAverage ?: 0.0)
 
                 val year = (detail.releaseDate ?: detail.firstAirDate ?: "").take(4)
                 val runtimeStr = if (detail.runtime != null && detail.runtime > 0) "${detail.runtime} min" else ""
-                binding.tvMeta.text = "$year  $runtimeStr".trim()
+                binding.detailYear.text = "$year   $runtimeStr".trim()
 
-                binding.tvGenres.text = detail.genres?.joinToString(" • ") { it.name } ?: ""
+                binding.detailGenres.text = detail.genres?.joinToString(" • ") { it.name } ?: ""
 
                 Glide.with(this@DetailActivity)
                     .load("https://image.tmdb.org/t/p/w780" + detail.backdropPath)
-                    .into(binding.ivBackdrop)
+                    .into(binding.detailBackdrop)
 
             } catch (e: Exception) {
-                Toast.makeText(this@DetailActivity, "Failed to load content", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@DetailActivity, "Data load karne me problem aayi", Toast.LENGTH_SHORT).show()
             }
         }
     }
 
     @SuppressLint("SetJavaScriptEnabled")
-private fun openInAppPlayer(url: String) {
-    val dialog = Dialog(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen)
-    val webView = WebView(this)
-    dialog.setContentView(webView)
+    private fun openInAppPlayer(url: String) {
+        val dialog = Dialog(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen)
+        val webView = WebView(this)
+        dialog.setContentView(webView)
 
-    webView.settings.apply {
-        javaScriptEnabled = true
-        domStorageEnabled = true
-        allowFileAccess = true
-        allowContentAccess = true
-        databaseEnabled = true
-        mediaPlaybackRequiresUserGesture = false // Auto video playback ke liye
-        mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-    }
-
-    webView.webViewClient = object : WebViewClient() {
-        override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
-            url?.let { view?.loadUrl(it) }
-            return true
+        webView.settings.apply {
+            javaScriptEnabled = true
+            domStorageEnabled = true
+            allowFileAccess = true
+            allowContentAccess = true
+            databaseEnabled = true
+            mediaPlaybackRequiresUserGesture = false
+            mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
         }
+
+        webView.webViewClient = object : WebViewClient() {
+            override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
+                url?.let { view?.loadUrl(it) }
+                return true
+            }
+        }
+
+        webView.webChromeClient = WebChromeClient()
+        webView.loadUrl(url)
+        dialog.show()
     }
-    
-    webView.webChromeClient = WebChromeClient()
-
-    webView.loadUrl(url)
-    dialog.show()
-}
-
 }
