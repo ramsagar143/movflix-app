@@ -22,7 +22,6 @@ class DetailActivity : AppCompatActivity() {
         binding = ActivityDetailBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Flexible Intent Key Detection
         val mediaId = intent.getLongExtra("MEDIA_ID", -1L).takeIf { it != -1L }
             ?: intent.getLongExtra("id", -1L)
 
@@ -36,16 +35,15 @@ class DetailActivity : AppCompatActivity() {
             return
         }
 
-        // ScreenScape URL direct construction
         val targetUrl = if (mediaType == "tv") {
             "https://nxsha.screenscape.me/embed?tmdb=$mediaId&type=tv&s=1&e=1"
         } else {
             "https://nxsha.screenscape.me/embed?tmdb=$mediaId&type=movie"
         }
 
-        // Force Button Text UI
-        binding.btnPlayNow.text = "▶ Play Now"
-        binding.btnPlayNow.setOnClickListener {
+        // HARDCODED BUTTON TEXT CHANGE
+        binding.btnPlayTrailer.text = "▶ Play Now"
+        binding.btnPlayTrailer.setOnClickListener {
             openInAppPlayer(targetUrl)
         }
 
@@ -61,7 +59,10 @@ class DetailActivity : AppCompatActivity() {
                 
                 val rating = detail.voteAverage ?: 0.0
                 val year = (detail.releaseDate ?: detail.firstAirDate ?: "").take(4)
-                val runtimeStr = if (detail.runtime != null && detail.runtime > 0) "${detail.runtime} min" else ""
+                
+                // FIXED STRINGS FORMATTING
+                val runtimeVal = detail.runtime ?: 0
+                val runtimeStr = if (runtimeVal > 0) "$runtimeVal min" else ""
 
                 binding.tvMeta.text = "$rating ★   $year   $runtimeStr"
 
@@ -72,7 +73,7 @@ class DetailActivity : AppCompatActivity() {
                         .into(binding.ivBackdrop)
                 }
             } catch (e: Exception) {
-                // UI fail bhi ho tab bhi play ho jayega
+                // Ignore fallback
             }
         }
     }
