@@ -71,17 +71,32 @@ class DetailActivity : AppCompatActivity() {
     }
 
     @SuppressLint("SetJavaScriptEnabled")
-    private fun openInAppPlayer(url: String) {
-        val dialog = Dialog(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen)
-        val webView = WebView(this)
-        dialog.setContentView(webView)
+private fun openInAppPlayer(url: String) {
+    val dialog = Dialog(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen)
+    val webView = WebView(this)
+    dialog.setContentView(webView)
 
-        webView.settings.javaScriptEnabled = true
-        webView.settings.domStorageEnabled = true
-        webView.webViewClient = WebViewClient()
-        webView.webChromeClient = WebChromeClient()
-
-        webView.loadUrl(url)
-        dialog.show()
+    webView.settings.apply {
+        javaScriptEnabled = true
+        domStorageEnabled = true
+        allowFileAccess = true
+        allowContentAccess = true
+        databaseEnabled = true
+        mediaPlaybackRequiresUserGesture = false // Auto video playback ke liye
+        mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
     }
+
+    webView.webViewClient = object : WebViewClient() {
+        override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
+            url?.let { view?.loadUrl(it) }
+            return true
+        }
+    }
+    
+    webView.webChromeClient = WebChromeClient()
+
+    webView.loadUrl(url)
+    dialog.show()
+}
+
 }
