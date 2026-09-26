@@ -3,7 +3,6 @@ package com.movflix.app
 import android.annotation.SuppressLint
 import android.app.Dialog
 import android.os.Bundle
-import android.view.View
 import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -17,13 +16,13 @@ import kotlinx.coroutines.launch
 class DetailActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityDetailBinding
-    private var streamUrl: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityDetailBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // Flexible Intent Key Detection
         val mediaId = intent.getLongExtra("MEDIA_ID", -1L).takeIf { it != -1L }
             ?: intent.getLongExtra("id", -1L)
 
@@ -32,25 +31,22 @@ class DetailActivity : AppCompatActivity() {
             ?: "movie"
 
         if (mediaId == -1L) {
-            Toast.makeText(this, "Invalid content", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Media ID missing", Toast.LENGTH_SHORT).show()
             finish()
             return
         }
 
-        // Direct ScreenScape URL construct karke Fallback setup kar do
-        streamUrl = if (mediaType == "movie") {
-            "https://nxsha.screenscape.me/embed?tmdb=$mediaId&type=movie"
-        } else {
+        // ScreenScape URL direct construction
+        val targetUrl = if (mediaType == "tv") {
             "https://nxsha.screenscape.me/embed?tmdb=$mediaId&type=tv&s=1&e=1"
+        } else {
+            "https://nxsha.screenscape.me/embed?tmdb=$mediaId&type=movie"
         }
 
-        binding.btnPlayTrailer.text = "▶ Play Now"
-        binding.btnPlayTrailer.setOnClickListener {
-            streamUrl?.let { url ->
-                openInAppPlayer(url)
-            } ?: run {
-                Toast.makeText(this, "Streaming URL not found", Toast.LENGTH_SHORT).show()
-            }
+        // Force Button Text UI
+        binding.btnPlayNow.text = "▶ Play Now"
+        binding.btnPlayNow.setOnClickListener {
+            openInAppPlayer(targetUrl)
         }
 
         fetchDetail(mediaType, mediaId)
@@ -60,26 +56,14 @@ class DetailActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 val detail = ApiClient.service.getDetail(type, id)
+                binding.tvTitle.text = detail.title ?: detail.name ?: "Movie"
+                binding.tvOverview.text = detail.overview ?: ""
                 
-                // Backend URL override if available
-                if (!detail.streamUrl.isNullOrEmpty()) {
-                    streamUrl = detail.streamUrl
-                }
-
-                binding.tvTitle.text = detail.title ?: detail.name ?: "Unknown"
-                binding.tvOverview.text = detail.overview ?: "No description available."
-
                 val rating = detail.voteAverage ?: 0.0
                 val year = (detail.releaseDate ?: detail.firstAirDate ?: "").take(4)
                 val runtimeStr = if (detail.runtime != null && detail.runtime > 0) "${detail.runtime} min" else ""
 
-                binding.tvMeta.text = listOf(
-                    if (rating > 0) "★ ${String.format("%.1f", rating)}" else null,
-                    year.ifEmpty { null },
-                    runtimeStr.ifEmpty { null }
-                ).filterNotNull().joinToString("   ")
-
-                binding.tvGenres.text = detail.genres?.joinToString(" • ") { it.name } ?: ""
+                binding.tvMeta.text = "$rating ★   $year   $runtimeStr"
 
                 val backdropPath = detail.backdropPath ?: detail.posterPath
                 if (!backdropPath.isNullOrEmpty()) {
@@ -87,9 +71,8 @@ class DetailActivity : AppCompatActivity() {
                         .load("https://image.tmdb.org/t/p/w780$backdropPath")
                         .into(binding.ivBackdrop)
                 }
-
             } catch (e: Exception) {
-                // Keep default calculated ScreenScape URL even if detail API fails
+                // UI fail bhi ho tab bhi play ho jayega
             }
         }
     }
