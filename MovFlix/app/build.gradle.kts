@@ -8,12 +8,13 @@ android {
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.movflix.app"
+        applicationId = "com.movflix.app.v2" // Package ID change kiya taaki purana cache clear ho sake
         minSdk = 24
         targetSdk = 34
-        versionCode = 2
-        versionName = "2.0"
-        // 👇👇👇 YAHAN APNI RENDER BACKEND URL DAALO (slash ke saath) 👇👇👇
+        versionCode = 3                      // Version badha diya
+        versionName = "3.0"
+        
+        // Render Backend URL
         buildConfigField("String", "BACKEND_URL", "\"https://movflix-16ow.onrender.com/\"")
     }
 
@@ -37,4 +38,7 @@ dependencies {
     implementation("com.squareup.retrofit2:retrofit:2.11.0")
     implementation("com.squareup.retrofit2:converter-gson:2.11.0")
     implementation("io.coil-kt:coil:2.6.0")
+
+    // 👇 ADDED GLIDE DEPENDENCIES (Yeh add na hone ki wajah se crash ho raha tha) 👇
+    implementation("com.github.bumptech.glide:glide:4.16.0")
 }
