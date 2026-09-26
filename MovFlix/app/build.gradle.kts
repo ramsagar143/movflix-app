@@ -11,8 +11,8 @@ android {
         applicationId = "com.movflix.app"
         minSdk = 24
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "2.0"
         // 👇👇👇 YAHAN APNI RENDER BACKEND URL DAALO (slash ke saath) 👇👇👇
         buildConfigField("String", "BACKEND_URL", "\"https://movflix-16ow.onrender.com/\"")
     }
