@@ -1,81 +1,87 @@
 package com.movflix.app
 
-import android.content.Intent
-import android.net.Uri
+import android.annotation.SuppressLint
+import android.app.Dialog
 import android.os.Bundle
 import android.view.View
-import android.widget.ImageView
-import android.widget.TextView
+import android.webkit.WebChromeClient
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import coil.load
-import com.google.android.material.button.MaterialButton
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
+import androidx.lifecycle.lifecycleScope
+import com.bumptech.glide.Glide
+import com.movflix.app.databinding.ActivityDetailBinding
+import kotlinx.coroutines.launch
 
 class DetailActivity : AppCompatActivity() {
 
+    private lateinit var binding: ActivityDetailBinding
+    private var streamUrl: String? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_detail)
+        binding = ActivityDetailBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
-        val id = intent.getIntExtra("id", 0)
-        val type = intent.getStringExtra("type") ?: "movie"
-        val fallbackTitle = intent.getStringExtra("title") ?: ""
+        val mediaId = intent.getLongExtra("MEDIA_ID", -1)
+        val mediaType = intent.getStringExtra("MEDIA_TYPE") ?: "movie"
 
-        val backdrop: ImageView = findViewById(R.id.detailBackdrop)
-        val titleView: TextView = findViewById(R.id.detailTitle)
-        val ratingView: TextView = findViewById(R.id.detailRating)
-        val yearView: TextView = findViewById(R.id.detailYear)
-        val genresView: TextView = findViewById(R.id.detailGenres)
-        val overviewView: TextView = findViewById(R.id.detailOverview)
-        val playBtn: MaterialButton = findViewById(R.id.playBtn)
-        val moreBtn: MaterialButton = findViewById(R.id.moreBtn)
+        if (mediaId == -1L) {
+            finish()
+            return
+        }
 
-        titleView.text = fallbackTitle
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        fetchDetail(mediaType, mediaId)
 
-        Api.service.detail(type, id).enqueue(object : Callback<Detail> {
-            override fun onResponse(call: Call<Detail>, response: Response<Detail>) {
-                val d = response.body()
-                if (d == null) {
-                    Toast.makeText(this@DetailActivity, "Detail load nahi hua", Toast.LENGTH_SHORT).show()
-                    return
-                }
-                backdrop.load(Api.img(d.backdropPath ?: d.posterPath, "w780")) {
-                    placeholder(R.color.card_bg)
-                    error(R.color.card_bg)
-                }
-                titleView.text = d.displayTitle
-                ratingView.text = "★ %.1f".format(d.voteAverage ?: 0.0)
-                val date = d.releaseDate ?: d.firstAirDate
-                yearView.text = if (date.isNullOrEmpty()) "" else date.take(4)
-                genresView.text = d.genres?.mapNotNull { it.name }?.joinToString(" • ") ?: ""
-                overviewView.text = d.overview?.takeIf { it.isNotBlank() } ?: "Overview available nahi hai."
-
-                playBtn.setOnClickListener {
-                    val key = d.trailerKey()
-                    if (key != null) {
-                        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/watch?v=" + key)))
-                    } else {
-                        Toast.makeText(this@DetailActivity, "Iske liye trailer available nahi hai", Toast.LENGTH_SHORT).show()
-                    }
-                }
-                moreBtn.setOnClickListener {
-                    overviewView.visibility =
-                        if (overviewView.visibility == View.VISIBLE) View.GONE else View.VISIBLE
-                }
+        binding.btnPlayTrailer.text = "Play Now"
+        binding.btnPlayTrailer.setOnClickListener {
+            if (!streamUrl.isNullEmpty()) {
+                openInAppPlayer(streamUrl!!)
+            } else {
+                Toast.makeText(this, "Streaming link not available", Toast.LENGTH_SHORT).show()
             }
-
-            override fun onFailure(call: Call<Detail>, t: Throwable) {
-                Toast.makeText(this@DetailActivity, "Network error: ${'$'}{t.message}", Toast.LENGTH_LONG).show()
-            }
-        })
+        }
     }
 
-    override fun onSupportNavigateUp(): Boolean {
-        finish()
-        return true
+    private fun fetchDetail(type: String, id: Long) {
+        lifecycleScope.launch {
+            try {
+                val detail = ApiClient.service.getDetail(type, id)
+                streamUrl = detail.streamUrl
+
+                binding.tvTitle.text = detail.title ?: detail.name ?: ""
+                binding.tvOverview.text = detail.overview ?: ""
+                binding.tvRating.text = String.format("%.1f", detail.voteAverage ?: 0.0)
+
+                val year = (detail.releaseDate ?: detail.firstAirDate ?: "").take(4)
+                val runtimeStr = if (detail.runtime != null && detail.runtime > 0) "${detail.runtime} min" else ""
+                binding.tvMeta.text = "$year  $runtimeStr".trim()
+
+                binding.tvGenres.text = detail.genres?.joinToString(" • ") { it.name } ?: ""
+
+                Glide.with(this@DetailActivity)
+                    .load("https://image.tmdb.org/t/p/w780" + detail.backdropPath)
+                    .into(binding.ivBackdrop)
+
+            } catch (e: Exception) {
+                Toast.makeText(this@DetailActivity, "Failed to load content", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    @SuppressLint("SetJavaScriptEnabled")
+    private fun openInAppPlayer(url: String) {
+        val dialog = Dialog(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen)
+        val webView = WebView(this)
+        dialog.setContentView(webView)
+
+        webView.settings.javaScriptEnabled = true
+        webView.settings.domStorageEnabled = true
+        webView.webViewClient = WebViewClient()
+        webView.webChromeClient = WebChromeClient()
+
+        webView.loadUrl(url)
+        dialog.show()
     }
 }
