@@ -1,80 +1,86 @@
 package com.movflix.app
 
 import com.google.gson.annotations.SerializedName
-import retrofit2.Call
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.GET
 import retrofit2.http.Path
 import retrofit2.http.Query
 
-const val IMG_BASE = "https://image.tmdb.org/t/p/"
+object ApiClient {
+    // Apne server ka URL yahan daalein
+    private const val BASE_URL = "http://10.0.2.2:3000/" 
 
-data class MediaResponse(val results: List<Media>? = null)
-
-data class Media(
-    val id: Int = 0,
-    val title: String? = null,
-    val name: String? = null,
-    val overview: String? = null,
-    @SerializedName("poster_path") val posterPath: String? = null,
-    @SerializedName("backdrop_path") val backdropPath: String? = null,
-    @SerializedName("vote_average") val voteAverage: Double? = null,
-    @SerializedName("media_type") val mediaType: String? = null,
-    @SerializedName("release_date") val releaseDate: String? = null,
-    @SerializedName("first_air_date") val firstAirDate: String? = null
-) {
-    val displayTitle: String get() = title ?: name ?: "Unknown"
-    val type: String get() = when {
-        mediaType == "tv" -> "tv"
-        mediaType == "movie" -> "movie"
-        name != null -> "tv"
-        else -> "movie"
-    }
-}
-
-data class Genre(val id: Int = 0, val name: String? = null)
-data class Video(val key: String? = null, val site: String? = null, val type: String? = null)
-data class Videos(val results: List<Video>? = null)
-
-data class Detail(
-    val id: Int = 0,
-    val title: String? = null,
-    val name: String? = null,
-    val overview: String? = null,
-    val runtime: Int? = null,
-    val genres: List<Genre>? = null,
-    val videos: Videos? = null,
-    @SerializedName("poster_path") val posterPath: String? = null,
-    @SerializedName("backdrop_path") val backdropPath: String? = null,
-    @SerializedName("vote_average") val voteAverage: Double? = null,
-    @SerializedName("release_date") val releaseDate: String? = null,
-    @SerializedName("first_air_date") val firstAirDate: String? = null
-) {
-    val displayTitle: String get() = title ?: name ?: "Unknown"
-    fun trailerKey(): String? =
-        videos?.results?.firstOrNull { it.site == "YouTube" && it.type == "Trailer" }?.key
-            ?: videos?.results?.firstOrNull { it.site == "YouTube" }?.key
-}
-
-interface TmdbService {
-    @GET("trending") fun trending(): Call<MediaResponse>
-    @GET("discover/movie") fun movies(): Call<MediaResponse>
-    @GET("discover/tv") fun shows(): Call<MediaResponse>
-    @GET("anime") fun anime(): Call<MediaResponse>
-    @GET("search") fun search(@Query("q") q: String): Call<MediaResponse>
-    @GET("detail/{type}/{id}") fun detail(@Path("type") type: String, @Path("id") id: Int): Call<Detail>
-}
-
-object Api {
-    val service: TmdbService by lazy {
+    val service: MovFlixApi by lazy {
         Retrofit.Builder()
-            .baseUrl(BuildConfig.BACKEND_URL)
+            .baseUrl(BASE_URL)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
-            .create(TmdbService::class.java)
+            .create(MovFlixApi::class.java)
     }
-
-    fun img(path: String?, size: String = "w500"): String? =
-        if (path.isNullOrEmpty()) null else IMG_BASE + size + path
 }
+
+interface MovFlixApi {
+    @GET("trending")
+    suspend fun getTrending(@Query("page") page: Int = 1): MediaResponse
+
+    @GET("discover/movie")
+    suspend fun getMovies(@Query("page") page: Int = 1, @Query("genre") genre: Int = 0): MediaResponse
+
+    @GET("discover/tv")
+    suspend fun getTv(@Query("page") page: Int = 1, @Query("genre") genre: Int = 0): MediaResponse
+
+    @GET("anime")
+    suspend fun getAnime(@Query("page") page: Int = 1): MediaResponse
+
+    @GET("search")
+    suspend fun search(@Query("q") query: String, @Query("page") page: Int = 1): MediaResponse
+
+    @GET("detail/{type}/{id}")
+    suspend fun getDetail(@Path("type") type: String, @Path("id") id: Long): MediaDetail
+}
+
+data class MediaItem(
+    val id: Long,
+    val title: String?,
+    val name: String?,
+    @SerializedName("poster_path") val posterPath: String?,
+    @SerializedName("backdrop_path") val backdropPath: String?,
+    @SerializedName("vote_average") val voteAverage: Double?,
+    @SerializedName("release_date") val releaseDate: String?,
+    @SerializedName("first_air_date") val firstAirDate: String?,
+    @SerializedName("media_type") val mediaType: String?
+) {
+    val displayTitle: String get() = title ?: name ?: "Unknown"
+    val year: String get() = (releaseDate ?: firstAirDate ?: "").take(4)
+}
+
+data class MediaResponse(
+    val page: Int,
+    val results: List<MediaItem>,
+    @SerializedName("total_pages") val totalPages: Int
+)
+
+data class MediaDetail(
+    val id: Long,
+    val title: String?,
+    val name: String?,
+    val overview: String?,
+    @SerializedName("poster_path") val posterPath: String?,
+    @SerializedName("backdrop_path") val backdropPath: String?,
+    @SerializedName("vote_average") val voteAverage: Double?,
+    @SerializedName("release_date") val releaseDate: String?,
+    @SerializedName("first_air_date") val firstAirDate: String?,
+    val runtime: Int?,
+    val genres: List<Genre>?,
+    val credits: Credits?,
+    @SerializedName("stream_url") val streamUrl: String?
+)
+
+data class Genre(val id: Int, val name: String)
+data class Credits(val cast: List<Cast>?)
+data class Cast(
+    val name: String,
+    val character: String?,
+    @SerializedName("profile_path") val profilePath: String?
+)
