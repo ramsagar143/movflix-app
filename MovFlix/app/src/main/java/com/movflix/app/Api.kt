@@ -9,7 +9,7 @@ import retrofit2.http.Query
 
 object ApiClient {
     // Apne server ka URL yahan daalein
-    private const val BASE_URL = "http://10.0.2.2:3000/" 
+    private const val BASE_URL = "https://movflix-16ow.onrender.com/" 
 
     val service: MovFlixApi by lazy {
         Retrofit.Builder()
